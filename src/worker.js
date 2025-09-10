@@ -30,7 +30,20 @@ function genClashNodes(ips) {
   }));
 }
 
+// 规则和分组模板，自动分流流媒体和常见应用
 function genClashConfig(nodes) {
+  const proxies = nodes.map(node =>
+    "  - " +
+    JSON.stringify(node)
+      .replace(/"([^"]+)":/g, "$1:") // YAML 风格
+      .replace(/^{/, "")
+      .replace(/}$/, "")
+      .replace(/,/g, "\n    ")
+  ).join("\n");
+
+  const proxyNames = nodes.map((_, i) => `      - 优选${i + 1}`).join("\n");
+
+  // 可根据需要继续补充分组和规则
   return [
     "port: 7890",
     "socks-port: 7891",
@@ -38,22 +51,87 @@ function genClashConfig(nodes) {
     "mode: Rule",
     "log-level: info",
     "external-controller: '127.0.0.1:9090'",
+    "",
     "proxies:",
-    ...nodes.map(node =>
-      "  - " +
-      JSON.stringify(node)
-        .replace(/"([^"]+)":/g, "$1:") // 转为 YAML 风格
-        .replace(/^{/, "")
-        .replace(/}$/, "")
-        .replace(/,/g, "\n    ")
-    ),
+    proxies,
+    "",
     "proxy-groups:",
     "  - name: \"自动选择\"",
+    "    type: url-test",
+    "    proxies:",
+    proxyNames,
+    "    url: 'http://www.gstatic.com/generate_204'",
+    "    interval: 300",
+    "  - name: \"手动切换\"",
     "    type: select",
     "    proxies:",
-    ...nodes.map((_, i) => `      - 优选${i + 1}`),
+    proxyNames,
+    "  - name: \"Netflix\"",
+    "    type: select",
+    "    proxies:",
+    "      - 自动选择",
+    proxyNames,
+    "  - name: \"YouTube\"",
+    "    type: select",
+    "    proxies:",
+    "      - 自动选择",
+    proxyNames,
+    "  - name: \"Telegram\"",
+    "    type: select",
+    "    proxies:",
+    "      - 自动选择",
+    proxyNames,
+    "  - name: \"OpenAI\"",
+    "    type: select",
+    "    proxies:",
+    "      - 自动选择",
+    proxyNames,
+    "  - name: \"国外流量\"",
+    "    type: select",
+    "    proxies:",
+    "      - 自动选择",
+    proxyNames,
+    "  - name: \"国内流量\"",
+    "    type: select",
+    "    proxies:",
+    "      - DIRECT",
+    "",
     "rules:",
-    "  - GEOIP,CN,DIRECT",
+    // 流媒体及常见应用专属分流
+    "  - DOMAIN-SUFFIX,netflix.com,Netflix",
+    "  - DOMAIN-SUFFIX,nflxvideo.net,Netflix",
+    "  - DOMAIN-SUFFIX,netflix.net,Netflix",
+    "  - DOMAIN-SUFFIX,netflixdnstest0.com,Netflix",
+    "  - DOMAIN-SUFFIX,netflixdnstest1.com,Netflix",
+    "  - DOMAIN-SUFFIX,netflixdnstest2.com,Netflix",
+    "  - DOMAIN-SUFFIX,netflixdnstest3.com,Netflix",
+    "  - DOMAIN-SUFFIX,netflixdnstest4.com,Netflix",
+    "  - DOMAIN-SUFFIX,netflixdnstest5.com,Netflix",
+    "  - DOMAIN-SUFFIX,netflixdnstest6.com,Netflix",
+    "  - DOMAIN-SUFFIX,netflixdnstest7.com,Netflix",
+    "  - DOMAIN-SUFFIX,netflixdnstest8.com,Netflix",
+    "  - DOMAIN-SUFFIX,netflixdnstest9.com,Netflix",
+    "  - DOMAIN-SUFFIX,youtube.com,YouTube",
+    "  - DOMAIN-SUFFIX,googlevideo.com,YouTube",
+    "  - DOMAIN-SUFFIX,ytimg.com,YouTube",
+    "  - DOMAIN-SUFFIX,telegram.org,Telegram",
+    "  - DOMAIN-SUFFIX,t.me,Telegram",
+    "  - DOMAIN-SUFFIX,openai.com,OpenAI",
+    "  - DOMAIN-SUFFIX,chat.openai.com,OpenAI",
+    "  - DOMAIN-SUFFIX,my.telegram.org,Telegram",
+    "  - DOMAIN-SUFFIX,telegra.ph,Telegram",
+    "",
+    // 常用国外应用和流量
+    "  - DOMAIN-SUFFIX,github.com,国外流量",
+    "  - DOMAIN-SUFFIX,githubusercontent.com,国外流量",
+    "  - DOMAIN-SUFFIX,twitter.com,国外流量",
+    "  - DOMAIN-SUFFIX,facebook.com,国外流量",
+    "  - DOMAIN-SUFFIX,instagram.com,国外流量",
+    "  - DOMAIN-SUFFIX,google.com,国外流量",
+    "  - DOMAIN-SUFFIX,gstatic.com,国外流量",
+    "",
+    // 国内走直连
+    "  - GEOIP,CN,国内流量",
     "  - MATCH,自动选择"
   ].join("\n");
 }
@@ -101,7 +179,7 @@ export default {
     try {
       await refreshIPs(env);
     } catch (e) {
-      // 定时任务出错一般可以忽略
+      // ignore schedule error
     }
   }
 };
