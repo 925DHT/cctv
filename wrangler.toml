@@ -5,9 +5,6 @@ compatibility_date = "2023-12-01"
 [triggers]
 crons = ["0 */4 * * *"] # 每4小时执行一次
 
-[vars]
-# 可根据需要添加
-
 [[kv_namespaces]]
-binding = "warp2018"
-id = "0d2d44181978408ca3ca05e0e9b8306c" # 部署后在 Cloudflare Dashboard KV 查看并填写
+binding = "OPENCLASH_KV"
+id = "0d2d44181978408ca3ca05e0e9b8306c"
