@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 */24 * * *' # 每24小时部署一次
+    - cron: '0 */4 * * *' # 每4小时部署一次
 
 jobs:
   deploy:
@@ -22,7 +22,7 @@ jobs:
       - name: Install Wrangler
         run: npm install -g wrangler
 
-      - name: Publish to Cloudflare Workers
+      - name: Deploy to Cloudflare Workers
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-        run: wrangler publish
+        run: wrangler deploy
