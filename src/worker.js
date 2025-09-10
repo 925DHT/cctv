@@ -2,6 +2,7 @@ const IP_SOURCE_URL = "https://raw.githubusercontent.com/ethgan/yxip/main/ip.txt
 const KV_KEY = "best_ips";
 const NODE_COUNT = 20;
 
+// 获取优选IP
 async function fetchIPs() {
   const resp = await fetch(IP_SOURCE_URL, { cf: { cacheTtl: 60 } });
   if (!resp.ok) throw new Error("Failed to fetch IPs");
@@ -13,6 +14,7 @@ async function fetchIPs() {
     .slice(0, NODE_COUNT);
 }
 
+// 生成 Clash 节点（支持流媒体解锁的模板）
 function genClashNodes(ips) {
   return ips.map((ip, idx) => ({
     name: `优选${idx + 1}`,
@@ -30,6 +32,7 @@ function genClashNodes(ips) {
   }));
 }
 
+// 生成 Clash YAML 订阅
 function genClashConfig(nodes) {
   return [
     "port: 7890",
@@ -42,7 +45,7 @@ function genClashConfig(nodes) {
     ...nodes.map(node =>
       "  - " +
       JSON.stringify(node)
-        .replace(/"([^"]+)":/g, "$1:") 
+        .replace(/"([^"]+)":/g, "$1:") // YAML 风格
         .replace(/^{/, "")
         .replace(/}$/, "")
         .replace(/,/g, "\n    ")
@@ -58,6 +61,7 @@ function genClashConfig(nodes) {
   ].join("\n");
 }
 
+// 定时任务: 刷新最佳IP
 async function refreshIPs(env) {
   const ips = await fetchIPs();
   await env.OPENCLASH_KV.put(KV_KEY, JSON.stringify(ips));
@@ -65,7 +69,13 @@ async function refreshIPs(env) {
 
 export default {
   async fetch(request, env, ctx) {
-    if (new URL(request.url).pathname === "/sub" || new URL(request.url).pathname === "/clash") {
+    const pathname = new URL(request.url).pathname;
+    // 支持根路径、/sub、/clash 作为订阅输出
+    if (
+      pathname === "/" ||
+      pathname === "/sub" ||
+      pathname === "/clash"
+    ) {
       let ipJson = await env.OPENCLASH_KV.get(KV_KEY);
       let ips;
       if (!ipJson) {
@@ -80,11 +90,12 @@ export default {
         headers: { "content-type": "text/yaml; charset=utf-8" }
       });
     }
-    if(new URL(request.url).pathname === "/ping") {
+    if (pathname === "/ping") {
       return new Response("ok", { headers: { "content-type": "text/plain" } });
     }
     return new Response("Not found", { status: 404 });
   },
+  // 定时触发器
   async scheduled(event, env, ctx) {
     await refreshIPs(env);
   }
