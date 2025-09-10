@@ -1,11 +1,7 @@
-// Cloudflare Workers Script: OpenClash Subscription Proxy
 const IP_SOURCE_URL = "https://raw.githubusercontent.com/ethgan/yxip/main/ip.txt";
-
-// KV 命名空间会在 wrangler.toml 配置
 const KV_KEY = "best_ips";
 const NODE_COUNT = 20;
 
-// 获取优选IP
 async function fetchIPs() {
   const resp = await fetch(IP_SOURCE_URL, { cf: { cacheTtl: 60 } });
   if (!resp.ok) throw new Error("Failed to fetch IPs");
@@ -17,7 +13,6 @@ async function fetchIPs() {
     .slice(0, NODE_COUNT);
 }
 
-// 生成 Clash 节点（支持流媒体解锁的模板）
 function genClashNodes(ips) {
   return ips.map((ip, idx) => ({
     name: `优选${idx + 1}`,
@@ -30,12 +25,11 @@ function genClashNodes(ips) {
     "plugin-opts": {
       mode: "websocket",
       tls: true,
-      host: "www.netflix.com" // 伪装/解锁流媒体
+      host: "www.netflix.com"
     }
   }));
 }
 
-// 生成 Clash YAML 订阅
 function genClashConfig(nodes) {
   return [
     "port: 7890",
@@ -48,7 +42,7 @@ function genClashConfig(nodes) {
     ...nodes.map(node =>
       "  - " +
       JSON.stringify(node)
-        .replace(/"([^"]+)":/g, "$1:") // YAML 风格
+        .replace(/"([^"]+)":/g, "$1:") 
         .replace(/^{/, "")
         .replace(/}$/, "")
         .replace(/,/g, "\n    ")
@@ -64,17 +58,14 @@ function genClashConfig(nodes) {
   ].join("\n");
 }
 
-// 定时任务: 刷新最佳IP
 async function refreshIPs(env) {
   const ips = await fetchIPs();
   await env.OPENCLASH_KV.put(KV_KEY, JSON.stringify(ips));
 }
 
-// 入口
 export default {
   async fetch(request, env, ctx) {
     if (new URL(request.url).pathname === "/sub" || new URL(request.url).pathname === "/clash") {
-      // 获取 KV
       let ipJson = await env.OPENCLASH_KV.get(KV_KEY);
       let ips;
       if (!ipJson) {
@@ -89,14 +80,11 @@ export default {
         headers: { "content-type": "text/yaml; charset=utf-8" }
       });
     }
-    // 健康检查
     if(new URL(request.url).pathname === "/ping") {
       return new Response("ok", { headers: { "content-type": "text/plain" } });
     }
     return new Response("Not found", { status: 404 });
   },
-
-  // 定时触发器
   async scheduled(event, env, ctx) {
     await refreshIPs(env);
   }
