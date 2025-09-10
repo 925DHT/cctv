@@ -1,0 +1,13 @@
+name = "openclash-subscription"
+main = "src/worker.js"
+compatibility_date = "2023-12-01"
+
+[triggers]
+crons = ["0 */4 * * *"] # 每4小时执行一次
+
+[vars]
+# 可根据需要添加
+
+[[kv_namespaces]]
+binding = "OPENCLASH_KV"
+id = "your-kv-namespace-id" # 部署后在 Cloudflare Dashboard KV 查看并填写
