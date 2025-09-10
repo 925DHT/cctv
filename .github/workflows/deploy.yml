@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 */4 * * *' # 每4小时部署一次
+    - cron: '0 */24 * * *' # 每24小时部署一次
 
 jobs:
   deploy:
@@ -14,10 +14,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+      - name: Install Volta (Node.js 20)
+        uses: volta-cli/action@v4
         with:
-          node-version: '18'
+          node-version: 20
 
       - name: Install Wrangler
         run: npm install -g wrangler
